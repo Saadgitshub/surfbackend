@@ -6,6 +6,7 @@ import com.example.Surf.Models.SafetyInfo;
 import com.example.Surf.Models.Beach;
 import com.example.Surf.Repositories.SafetyInfoRepository;
 import com.example.Surf.Repositories.BeachRepository;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,17 @@ public class SafetyInfoService {
         if (safetyInfoDTO.getCategory() == null || safetyInfoDTO.getCategory().isEmpty()) {
             logger.error("Category is required");
             throw new IllegalArgumentException("Category is required");
+        }
+        // Validate JSON content
+        try {
+            JSONObject json = new JSONObject(safetyInfoDTO.getContent());
+            if (!json.has("lang") || !json.has("description") || !json.has("icon")) {
+                logger.error("Content must include 'lang', 'description', and 'icon' fields");
+                throw new IllegalArgumentException("Content must include 'lang', 'description', and 'icon' fields");
+            }
+        } catch (Exception e) {
+            logger.error("Invalid content JSON: {}", e.getMessage());
+            throw new IllegalArgumentException("Invalid content JSON: " + e.getMessage());
         }
         Beach beach = null;
         if (safetyInfoDTO.getBeach() != null && safetyInfoDTO.getBeach().getId() != null) {
@@ -110,6 +122,17 @@ public class SafetyInfoService {
                 logger.error("Category is required");
                 throw new IllegalArgumentException("Category is required");
             }
+            // Validate JSON content
+            try {
+                JSONObject json = new JSONObject(safetyInfoDTO.getContent());
+                if (!json.has("lang") || !json.has("description") || !json.has("icon")) {
+                    logger.error("Content must include 'lang', 'description', and 'icon' fields");
+                    throw new IllegalArgumentException("Content must include 'lang', 'description', and 'icon' fields");
+                }
+            } catch (Exception e) {
+                logger.error("Invalid content JSON: {}", e.getMessage());
+                throw new IllegalArgumentException("Invalid content JSON: " + e.getMessage());
+            }
             Beach beach = null;
             if (safetyInfoDTO.getBeach() != null && safetyInfoDTO.getBeach().getId() != null) {
                 Optional<Beach> beachOpt = beachRepository.findById(safetyInfoDTO.getBeach().getId());
@@ -149,6 +172,13 @@ public class SafetyInfoService {
         BeachDTO beachDTO = safetyInfo.getBeach() != null ? new BeachDTO() {{
             setId(safetyInfo.getBeach().getId());
             setName(safetyInfo.getBeach().getName());
+            setCity(safetyInfo.getBeach().getCity());
+            setDescription(safetyInfo.getBeach().getDescription());
+            setStatus("Active"); // Default or fetch from Beach if available
+            setActiveUsers(0); // Default, adjust if tracking active users
+            setAlerts(0); // Default, adjust if tracking alerts
+            setLastUpdated(safetyInfo.getLastUpdated().toString()); // Align with SafetyInfo
+            setZones(null); // Avoid fetching zones to prevent lazy loading issues
         }} : null;
         return new SafetyInfoDTO(
             safetyInfo.getId(),

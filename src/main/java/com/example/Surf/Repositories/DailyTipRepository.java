@@ -2,9 +2,13 @@ package com.example.Surf.Repositories;
 
 import com.example.Surf.Models.DailyTip;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.time.LocalDate;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface DailyTipRepository extends JpaRepository<DailyTip, Long> {
-    Optional<DailyTip> findByValidDateAndLanguage(LocalDate validDate, String language);
+    List<DailyTip> findByDateAndStatus(String date, String status);
+    Optional<DailyTip> findFirstByStatusOrderByDateDesc(String status);
 }

@@ -3,130 +3,93 @@ package com.example.Surf.Services;
 import com.example.Surf.DTO.DailyTipDTO;
 import com.example.Surf.Models.DailyTip;
 import com.example.Surf.Repositories.DailyTipRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class DailyTipService {
-    private static final Logger logger = LoggerFactory.getLogger(DailyTipService.class);
 
     @Autowired
-    private DailyTipRepository tipRepository;
+    private DailyTipRepository dailyTipRepository;
 
-    public DailyTipDTO getDailyTip(LocalDate date, String language) {
-        logger.info("Fetching daily tip for date: {} and language: {}", date, language);
-        Optional<DailyTip> tipOpt = tipRepository.findByValidDateAndLanguage(date, language);
-        if (!tipOpt.isPresent()) {
-            logger.warn("No tip found for date: {} and language: {}", date, language);
-            return null;
-        }
-        DailyTip tip = tipOpt.get();
-        logger.info("Fetched tip: {}", tip.getMessage());
-        return mapToDTO(tip);
+    public DailyTip createDailyTip(DailyTipDTO dto) {
+        DailyTip dailyTip = new DailyTip();
+        dailyTip.setTitle(dto.getTitle());
+        dailyTip.setContent(dto.getContent());
+        dailyTip.setCategory(dto.getCategory());
+        dailyTip.setStatus(dto.getStatus());
+        dailyTip.setDate(dto.getDate());
+        dailyTip.setLastUpdated(dto.getLastUpdated());
+        dailyTip.setUpdatedBy(dto.getUpdatedBy());
+        dailyTip.setViews(dto.getViews() != null ? dto.getViews() : 0);
+        dailyTip.setLikes(dto.getLikes() != null ? dto.getLikes() : 0);
+        return dailyTipRepository.save(dailyTip);
     }
 
-    public List<DailyTipDTO> getAllTips() {
-        logger.info("Fetching all daily tips");
-        List<DailyTip> tips = tipRepository.findAll();
-        logger.info("Fetched {} tips", tips.size());
-        return tips.stream().map(this::mapToDTO).collect(Collectors.toList());
+    public Optional<DailyTip> getDailyTipById(Long id) {
+        return dailyTipRepository.findById(id);
     }
 
-    public DailyTipDTO createTip(DailyTipDTO tipDTO) {
-        logger.info("Creating tip with DTO: {}", tipDTO);
-        if (tipDTO.getMessage() == null || tipDTO.getMessage().isEmpty()) {
-            logger.error("Message is required");
-            throw new IllegalArgumentException("Message is required");
-        }
-        if (tipDTO.getCategory() == null || tipDTO.getCategory().isEmpty()) {
-            logger.error("Category is required");
-            throw new IllegalArgumentException("Category is required");
-        }
-        if (tipDTO.getValidDate() == null) {
-            logger.error("Valid date is required");
-            throw new IllegalArgumentException("Valid date is required");
-        }
-        if (tipDTO.getLanguage() == null || tipDTO.getLanguage().isEmpty()) {
-            logger.error("Language is required");
-            throw new IllegalArgumentException("Language is required");
-        }
-        DailyTip tip = new DailyTip(
-            tipDTO.getMessage(),
-            tipDTO.getCategory(),
-            tipDTO.getValidDate(),
-            tipDTO.getLanguage(),
-            tipDTO.getStatus() != null ? tipDTO.getStatus() : "Draft",
-            tipDTO.getCreatedBy() != null ? tipDTO.getCreatedBy() : "Admin",
-            tipDTO.getViews() != null ? tipDTO.getViews() : 0L,
-            tipDTO.getLikes() != null ? tipDTO.getLikes() : 0L
-        );
-        DailyTip savedTip = tipRepository.save(tip);
-        logger.info("Saved tip: {}", savedTip.getMessage());
-        return mapToDTO(savedTip);
+    public Optional<DailyTip> getDailyTip(String language, String date) {
+        List<DailyTip> tips = dailyTipRepository.findByDateAndStatus(date, "ACTIVE");
+        return tips.stream()
+                .filter(tip -> {
+                    try {
+                        JSONObject content = new JSONObject(tip.getContent());
+                        return language.equals(content.getString("lang"));
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .findFirst();
     }
 
-    public Optional<DailyTipDTO> updateTip(Long id, DailyTipDTO tipDTO) {
-        logger.info("Updating tip ID: {} with DTO: {}", id, tipDTO);
-        return tipRepository.findById(id).map(tip -> {
-            if (tipDTO.getMessage() == null || tipDTO.getMessage().isEmpty()) {
-                logger.error("Message is required");
-                throw new IllegalArgumentException("Message is required");
-            }
-            if (tipDTO.getCategory() == null || tipDTO.getCategory().isEmpty()) {
-                logger.error("Category is required");
-                throw new IllegalArgumentException("Category is required");
-            }
-            if (tipDTO.getValidDate() == null) {
-                logger.error("Valid date is required");
-                throw new IllegalArgumentException("Valid date is required");
-            }
-            if (tipDTO.getLanguage() == null || tipDTO.getLanguage().isEmpty()) {
-                logger.error("Language is required");
-                throw new IllegalArgumentException("Language is required");
-            }
-            tip.setMessage(tipDTO.getMessage());
-            tip.setCategory(tipDTO.getCategory());
-            tip.setValidDate(tipDTO.getValidDate());
-            tip.setLanguage(tipDTO.getLanguage());
-            tip.setStatus(tipDTO.getStatus() != null ? tipDTO.getStatus() : "Draft");
-            tip.setCreatedBy(tipDTO.getCreatedBy() != null ? tipDTO.getCreatedBy() : "Admin");
-            tip.setViews(tipDTO.getViews() != null ? tipDTO.getViews() : 0L);
-            tip.setLikes(tipDTO.getLikes() != null ? tipDTO.getLikes() : 0L);
-            DailyTip updatedTip = tipRepository.save(tip);
-            logger.info("Updated tip: {}", updatedTip.getMessage());
-            return mapToDTO(updatedTip);
+    public Optional<DailyTip> getLatestActiveTip() {
+        return dailyTipRepository.findFirstByStatusOrderByDateDesc("ACTIVE");
+    }
+
+    public List<DailyTip> getAllDailyTips() {
+        return dailyTipRepository.findAll();
+    }
+
+    public Optional<DailyTip> updateDailyTip(Long id, DailyTipDTO dto) {
+        return dailyTipRepository.findById(id).map(dailyTip -> {
+            dailyTip.setTitle(dto.getTitle());
+            dailyTip.setContent(dto.getContent());
+            dailyTip.setCategory(dto.getCategory());
+            dailyTip.setStatus(dto.getStatus());
+            dailyTip.setDate(dto.getDate());
+            dailyTip.setLastUpdated(dto.getLastUpdated());
+            dailyTip.setUpdatedBy(dto.getUpdatedBy());
+            dailyTip.setViews(dto.getViews() != null ? dto.getViews() : dailyTip.getViews());
+            dailyTip.setLikes(dto.getLikes() != null ? dto.getLikes() : dailyTip.getLikes());
+            return dailyTipRepository.save(dailyTip);
         });
     }
 
-    public boolean deleteTip(Long id) {
-        logger.info("Deleting tip ID: {}", id);
-        if (tipRepository.existsById(id)) {
-            tipRepository.deleteById(id);
-            logger.info("Deleted tip ID: {}", id);
+    public boolean deleteDailyTip(Long id) {
+        return dailyTipRepository.findById(id).map(dailyTip -> {
+            dailyTipRepository.delete(dailyTip);
             return true;
-        }
-        logger.warn("Tip ID: {} not found", id);
-        return false;
+        }).orElse(false);
     }
 
-    private DailyTipDTO mapToDTO(DailyTip tip) {
-        return new DailyTipDTO(
-            tip.getId(),
-            tip.getMessage(),
-            tip.getCategory(),
-            tip.getValidDate(),
-            tip.getLanguage(),
-            tip.getStatus(),
-            tip.getCreatedBy(),
-            tip.getViews(),
-            tip.getLikes()
-        );
+    public DailyTipDTO mapToDTO(DailyTip dailyTip) {
+        DailyTipDTO dto = new DailyTipDTO();
+        dto.setId(dailyTip.getId());
+        dto.setTitle(dailyTip.getTitle());
+        dto.setContent(dailyTip.getContent());
+        dto.setCategory(dailyTip.getCategory());
+        dto.setStatus(dailyTip.getStatus());
+        dto.setDate(dailyTip.getDate());
+        dto.setLastUpdated(dailyTip.getLastUpdated());
+        dto.setUpdatedBy(dailyTip.getUpdatedBy());
+        dto.setViews(dailyTip.getViews());
+        dto.setLikes(dailyTip.getLikes());
+        return dto;
     }
 }

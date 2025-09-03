@@ -1,10 +1,7 @@
 package com.example.Surf.Controllers;
 
-import com.example.Surf.DTO.BeachDTO;
 import com.example.Surf.DTO.UserDTO;
-import com.example.Surf.Models.Beach;
 import com.example.Surf.Models.Zone;
-import com.example.Surf.Services.BeachService;
 import com.example.Surf.Services.UserService;
 import com.example.Surf.Services.ZoneService;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -16,11 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -31,9 +26,6 @@ public class UserController {
 
     @Autowired
     private ZoneService zoneService;
-
-    @Autowired
-    private BeachService beachService;
 
     @PostMapping("/users/update-location")
     public ResponseEntity<UserDTO> updateUserLocation(@RequestBody UserDTO userDTO) {
@@ -138,12 +130,6 @@ public class UserController {
             response.put("beachName", null);
             return ResponseEntity.ok(response);
         }
-    }
-
-    @GetMapping("/beaches")
-    public ResponseEntity<List<BeachDTO>> getAllBeaches() {
-        List<BeachDTO> beaches = beachService.getAllBeaches();
-        return ResponseEntity.ok(beaches);
     }
 
     private String mapZoneTypeToFrontend(String backendType) {
